@@ -108,9 +108,17 @@ const App: React.FC = () => {
     return { success: true, message: `Password for ${user.name} updated successfully!` };
 };
 
-  const handleDeleteUser = async (userId: string) => {
-    await db.deleteUser(userId);
-    await fetchData();
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    const isUserInUse = requests.some(req => req.requester === userName);
+    if (isUserInUse) {
+        alert(`Cannot delete "${userName}" as they are the requester for one or more change requests. Please reassign the requests before deleting the user.`);
+        return;
+    }
+
+    if (window.confirm(`Are you sure you want to delete the user "${userName}"? This action cannot be undone.`)) {
+        await db.deleteUser(userId);
+        await fetchData();
+    }
   };
 
   const handleAddDepartment = (e: React.FormEvent) => {
@@ -221,6 +229,7 @@ const App: React.FC = () => {
 
   const userNames = users.filter(u => u.role === 'user').map(u => u.name).sort();
   const usedDepartments = new Set(requests.map(req => req.department));
+  const usersWithRequests = new Set(requests.map(req => req.requester));
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800">
@@ -261,6 +270,7 @@ const App: React.FC = () => {
                 <CreateUserForm onCreateUser={handleCreateUser} />
                 <UserManagement 
                     users={users} 
+                    usersWithRequests={usersWithRequests}
                     onUpdatePassword={handleUpdateUserPassword} 
                     onDeleteUser={handleDeleteUser} 
                 />
