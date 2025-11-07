@@ -8,7 +8,7 @@ import { ChangeRequest, NewChangeRequest, Status, Department, User } from './typ
 import { summarizeChangeRequest } from './services/geminiService';
 import { INITIAL_DEPARTMENT_OPTIONS, STATUS_OPTIONS } from './constants';
 import * as db from './db';
-import { UserIcon, LogoutIcon } from './components/icons';
+import { UserIcon, LogoutIcon, TrashIcon } from './components/icons';
 import { LoginPage } from './components/LoginPage';
 
 
@@ -121,6 +121,18 @@ const App: React.FC = () => {
       setNewDepartment('');
     }
   };
+  
+  const handleDeleteDepartment = (departmentToDelete: string) => {
+    const isInUse = requests.some(req => req.department === departmentToDelete);
+    if (isInUse) {
+      alert(`Cannot delete "${departmentToDelete}" as it is currently assigned to one or more change requests.`);
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to delete the department "${departmentToDelete}"?`)) {
+      setDepartments(prev => prev.filter(d => d !== departmentToDelete));
+    }
+  };
 
   const handleAddRequest = async (newRequestData: NewChangeRequest) => {
     setIsSubmitting(true);
@@ -208,6 +220,7 @@ const App: React.FC = () => {
     : `${currentUser}'s ${statusFilter === 'All' ? '' : statusFilter + ' '}Requests`;
 
   const userNames = users.filter(u => u.role === 'user').map(u => u.name).sort();
+  const usedDepartments = new Set(requests.map(req => req.department));
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800">
@@ -268,9 +281,24 @@ const App: React.FC = () => {
                   </form>
                   <div className="mt-4">
                       <p className="text-sm font-medium text-slate-600">Available Departments:</p>
-                      <ul className="mt-2 space-y-1 text-sm text-slate-500 columns-2">
-                      {departments.map(d => <li key={d}>{d}</li>)}
-                      </ul>
+                        <ul className="mt-2 space-y-1 text-sm text-slate-500 columns-2">
+                          {departments.map(d => {
+                            const isInUse = usedDepartments.has(d);
+                            return (
+                              <li key={d} className="flex justify-between items-center group pr-2 hover:bg-slate-50 rounded">
+                                <span>{d}</span>
+                                <button
+                                  onClick={() => handleDeleteDepartment(d)}
+                                  disabled={isInUse}
+                                  title={isInUse ? "Cannot delete: department is in use by a request" : "Delete department"}
+                                  className="text-slate-400 opacity-0 group-hover:opacity-100 hover:text-red-600 focus:opacity-100 disabled:opacity-20 disabled:hover:text-slate-400 disabled:cursor-not-allowed transition-opacity"
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
                   </div>
                 </div>
                 </>
